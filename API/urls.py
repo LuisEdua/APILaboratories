@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import MeasuresView, SessionView, AdminsView, ManagerView, DispositiveView
+from .views import MeasuresView, SessionView, AdminsView, ManagerView, DispositiveView, EmailView
 
 urlpatterns=[
     path('measures/', MeasuresView.as_view(), name='measures_list'),
@@ -9,5 +9,6 @@ urlpatterns=[
     path('admin/<int:id>', AdminsView.as_view(), name='admin_process'),
     path('manager/<int:id>', ManagerView.as_view(), name='manager_process'),
     path('dispositive/<int:id>', DispositiveView.as_view(), name='dispositive_process'),
-    path('dispositive/', DispositiveView.as_view(), name='dispositive_list')
+    path('dispositive/', DispositiveView.as_view(), name='dispositive_list'),
+    path('email/', EmailView.as_view(), name='email')
 ]

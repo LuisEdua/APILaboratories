@@ -7,6 +7,7 @@ from .models import Measures, Admin, Manager, Dispositive
 from django.http.response import JsonResponse
 from django.contrib.auth.hashers import make_password, check_password
 import json
+from django.core.mail import send_mail
 
 
 def base_response(message, response) -> JsonResponse:
@@ -100,7 +101,6 @@ class AdminServiceImpl(IUserService):
 
 
 class DispositiveServiceImpl(IDispositiveService):
-
     adminServiceImpl = AdminServiceImpl()
 
     def list(self, id) -> JsonResponse:
@@ -129,7 +129,6 @@ class DispositiveServiceImpl(IDispositiveService):
             response = 0
             message = "Dispositive not found"
         return base_response(message, response)
-
 
     def delete(self, id) -> JsonResponse:
         try:
@@ -164,7 +163,6 @@ class DispositiveServiceImpl(IDispositiveService):
 
 
 class ManagerServiceImpl(IUserService):
-
     adminServiceImpl = AdminServiceImpl()
 
     dispositiveServiceImpl = DispositiveServiceImpl()
@@ -193,7 +191,6 @@ class ManagerServiceImpl(IUserService):
             message = "Not found"
         return base_response(message, response)
 
-
     def create(self, request, id) -> JsonResponse:
         jd = json.loads(request.body)
         try:
@@ -220,7 +217,6 @@ class ManagerServiceImpl(IUserService):
             message = "Manager not found"
             response = 0
         return base_response(message, response)
-
 
     def delete(self, id) -> JsonResponse:
         try:
@@ -274,13 +270,20 @@ class ManagerServiceImpl(IUserService):
             admin=admin
         )
 
-    def _find_and_ensure_exist_(self, id) -> Manager:
+    def _find_and_ensure_exist_(self, id):
         return Manager.objects.get(id=id)
+
+    def find_by_dispositive(self, id) -> Manager:
+        return Manager.objects.filter(dispositive_id=id).all()
+
+    def _get_email_(self, manager):
+        return list(manager.email)
 
 
 class SessionServiceImpl(ISessionService):
     adminServiceImpl = AdminServiceImpl()
     managerServiceImpl = ManagerServiceImpl()
+
     def validate(self, request) -> JsonResponse:
         response = self.adminServiceImpl.validate(request)
         if not json.loads(response.content)['status'] and json.loads(response.content)['message'] != 'Invalid password':
@@ -336,7 +339,32 @@ class MeasuresServiceImpl(IMeasuresService):
             dispositive = self.iServiceDispositive.find_by_serial_number(jd['serial_number_dispositive'])
         except Exception:
             dispositive = self.iServiceDispositive.create(jd)
+
         return Measures.objects.create(date=now, lpg=jd['lpg'], co=jd['co'],
                                        hydrogen=jd['hydrogen'], humidity=jd['humidity'],
                                        temperature=jd['temperature'],
                                        serial_number_esp32=jd['serial_number_esp32'], dispositive=dispositive)
+
+
+class EmailServiceImpl:
+
+    iServiceDispositive = DispositiveServiceImpl()
+    iAdminService = AdminServiceImpl()
+    iManagerService = ManagerServiceImpl()
+
+    def send_email(self, request):
+        jd = json.loads(request.body)
+        subject = 'Alerta'
+        from_email = 'selvetkal@gmail.com'
+        dispositive = self.iServiceDispositive.find_by_serial_number(jd['serial_number'])
+        dispositive_alias = dispositive.alias
+        admin_email = self.iAdminService.find_by_id(dispositive.admin.id).email
+        managers_email_list = [manager.email for manager in self.iManagerService.find_by_dispositive(dispositive.id)]
+        message = jd['message'] + ' en su dispositivo con el alias ' + dispositive_alias
+        if len(managers_email_list) > 0:
+            recipient_list = [admin_email] + managers_email_list
+        else:
+            recipient_list = [admin_email]
+
+        send_mail(subject, message, from_email, recipient_list)
+

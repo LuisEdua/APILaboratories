@@ -1,7 +1,8 @@
 from django.views import View
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from .implements import MeasuresServiceImpl, SessionServiceImpl, AdminServiceImpl, DispositiveServiceImpl, ManagerServiceImpl
+from .implements import MeasuresServiceImpl, SessionServiceImpl, \
+    AdminServiceImpl, DispositiveServiceImpl, ManagerServiceImpl, EmailServiceImpl
 
 
 # Create your views here.
@@ -17,6 +18,18 @@ class MeasuresView(View):
 
     def post(self, request):
         return self.iServiceMeasure.create(request)
+
+
+
+class EmailView(View):
+    emailService = EmailServiceImpl()
+
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request):
+        self.emailService.send_email(request)
 
 
 class AdminsView(View):
