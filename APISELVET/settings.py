@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+#from rest_framework_simplejwt.authentication import JWTAuthentication
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +26,7 @@ SECRET_KEY = 'django-insecure-_*p)8kk5)7z41v4oi!7=!+!!dtdut)#mt5erzgkw#w&z^tl^hj
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -38,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
     'API'
 ]
 
@@ -64,6 +66,11 @@ EMAIL_HOST_PASSWORD = 'hamldsfrlplfdzrh'
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'selvetkal@gmail.com'
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWT'
+    ]
+}
 
 TEMPLATES = [
     {

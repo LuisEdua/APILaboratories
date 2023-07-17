@@ -1,11 +1,14 @@
 from datetime import timedelta, datetime
 from typing import Any
-import bcrypt
 from pytz import timezone
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from .interfaces import IMeasuresService, ISessionService, IUserService, IDispositiveService
 from .models import Measures, Admin, Manager, Dispositive
 from django.http.response import JsonResponse
 from django.contrib.auth.hashers import make_password, check_password
+from rest_framework.response import Response
+from django.contrib.auth import authenticate
 import json
 from django.core.mail import send_mail
 
@@ -27,13 +30,30 @@ class AdminServiceImpl(IUserService):
             if check_password(js['password'], admin.password):
                 response = self.__admin_response__(admin, js)
                 message = "Login successfully"
+                status = True
+                refresh = RefreshToken.for_user(admin)
+                baseResponse = {
+                    'response': response,
+                    'message': message,
+                    'status': status,
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token)
+                }
             else:
-                response = 0
                 message = "Invalid password"
+                status = False
+                baseResponse = {
+                    'status': status,
+                    'message': message
+                }
         except Exception:
-            response = 0
             message = "Invalid email"
-        return base_response(message, response)
+            status = False
+            baseResponse = {
+                'status': status,
+                'message': message
+            }
+        return JsonResponse(baseResponse)
 
     def create(self, request) -> JsonResponse:
         js = json.loads(request.body)
@@ -174,13 +194,30 @@ class ManagerServiceImpl(IUserService):
             if check_password(jd['password'], manager.password):
                 response = self._manager_response_(manager, jd)
                 message = "Login successfully"
+                status = True
+                refresh = RefreshToken.for_user(manager)
+                baseResponse = {
+                    'response': response,
+                    'message': message,
+                    'status': status,
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token)
+                }
             else:
-                response = 0
                 message = "Invalid password"
+                status = False
+                baseResponse = {
+                    'status': status,
+                    'message': message
+                }
         except Exception:
-            response = 0
             message = "Invalid email"
-        return base_response(message, response)
+            status = False
+            baseResponse = {
+                'status': status,
+                'message': message
+            }
+        return JsonResponse(baseResponse)
 
     def list(self, id):
         try:
@@ -367,4 +404,8 @@ class EmailServiceImpl:
             recipient_list = [admin_email]
 
         send_mail(subject, message, from_email, recipient_list)
+
+        response = {'mails': recipient_list}
+
+        return JsonResponse(response)
 

@@ -3,6 +3,8 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from .implements import MeasuresServiceImpl, SessionServiceImpl, \
     AdminServiceImpl, DispositiveServiceImpl, ManagerServiceImpl, EmailServiceImpl
+#from rest_framework.decorators import api_view, permission_classes
+#from rest_framework.permissions import IsAuthenticated
 
 
 # Create your views here.
@@ -13,9 +15,12 @@ class MeasuresView(View):
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
+    """@api_view(['GET'])
+    @permission_classes(IsAuthenticated)"""
     def get(self, request, id):
         return self.iServiceMeasure.list(id)
 
+    ##@api_view(['POST'])
     def post(self, request):
         return self.iServiceMeasure.create(request)
 
@@ -29,7 +34,7 @@ class EmailView(View):
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request):
-        self.emailService.send_email(request)
+        return self.emailService.send_email(request)
 
 
 class AdminsView(View):
@@ -95,3 +100,4 @@ class SessionView(View):
 
     def post(self, request):
         return self.iServiceSession.validate(request)
+
