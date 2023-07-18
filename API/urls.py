@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import MeasuresView, SessionView, AdminsView, ManagerView, DispositiveView, EmailView
 
-urlpatterns=[
+urlpatterns = [
     path('measures/', MeasuresView.as_view(), name='measures_list'),
     path('measures/<int:id>', MeasuresView.as_view(), name='measures_process'),
     path('validate/', SessionView.as_view(), name='session_process'),
