@@ -2,7 +2,8 @@ from datetime import timedelta, datetime
 from typing import Any
 from pytz import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
-
+import statistics
+import numpy as np
 from .interfaces import IMeasuresService, ISessionService, IUserService, IDispositiveService
 from .models import Measures, Admin, Manager, Dispositive
 from django.http.response import JsonResponse
@@ -332,12 +333,17 @@ class MeasuresServiceImpl(IMeasuresService):
     tz_mexico = timezone('America/Mexico_City')
     iServiceDispositive = DispositiveServiceImpl()
 
-    def list(self, id) -> JsonResponse:
+    def list(self, request, id) -> JsonResponse:
         current_date = datetime.now(timezone('UTC'))
         one_year_ago = current_date - timedelta(days=365)
         measures = Measures.objects.filter(dispositive_id=id, date__gte=one_year_ago).all()
         if len(measures) > 0:
-            response = list(map(self.__measure_response__, measures))
+            responses = list(map(self.__measure_response__, measures))
+            results = self._calculate_(responses)
+            response = {
+                'data': responses,
+                'results': results
+            }
             message = "Success"
         else:
             response = 0
@@ -365,6 +371,7 @@ class MeasuresServiceImpl(IMeasuresService):
             'hydrogen': measure.hydrogen,
             'humidity': measure.humidity,
             'temperature': measure.temperature,
+            'error': measure.error,
             'serial_number_esp32': measure.serial_number_esp32,
             'dispositive': measure.dispositive.alias
         }
@@ -380,8 +387,67 @@ class MeasuresServiceImpl(IMeasuresService):
         return Measures.objects.create(date=now, lpg=jd['lpg'], co=jd['co'],
                                        hydrogen=jd['hydrogen'], humidity=jd['humidity'],
                                        temperature=jd['temperature'],
-                                       serial_number_esp32=jd['serial_number_esp32'], dispositive=dispositive)
+                                       serial_number_esp32=jd['serial_number_esp32'], error=jd['error'], dispositive=dispositive)
 
+    def _calculate_(self, measures):
+        co_values = [measure['co'] for measure in measures]
+        lpg_values = [measure['lpg'] for measure in measures]
+        hydrogen_values = [measure['hydrogen'] for measure in measures]
+        humidity_values = [measure['humidity'] for measure in measures]
+        temperature_values = [measure['temperature'] for measure in measures]
+        date_values = [measure['date'] for measure in measures]
+        error_sum = sum(measure['error'] for measure in measures)
+        probable_cases = len(measures) * 7
+
+        # Calcular la media
+        co_mean = statistics.mean(co_values)
+        lpg_mean = statistics.mean(lpg_values)
+        hydrogen_mean = statistics.mean(hydrogen_values)
+        humidity_mean = statistics.mean(humidity_values)
+        temperature_mean = statistics.mean(temperature_values)
+
+        # Calcular la mediana
+        co_median = statistics.median(co_values)
+        lpg_median = statistics.median(lpg_values)
+        hydrogen_median = statistics.median(hydrogen_values)
+        humidity_median = statistics.median(humidity_values)
+        temperature_median = statistics.median(temperature_values)
+
+        # Calcular la moda
+        co_mode = statistics.multimode(co_values)
+        lpg_mode = statistics.multimode(lpg_values)
+        hydrogen_mode = statistics.multimode(hydrogen_values)
+        humidity_mode = statistics.multimode(humidity_values)
+        temperature_mode = statistics.multimode(temperature_values)
+
+        # Calcular los cuartiles de las fechas
+        date_references = np.percentile([date.timestamp() for date in date_values], [1, 25, 50, 75, 100])
+
+        date_references = [datetime.fromtimestamp(timestamp, self.tz_mexico).strftime("%Y-%m-%d %H:%M:%S") for timestamp in date_references]
+
+        # Crear el diccionario de resultados
+        result = {
+            'co_mean': co_mean,
+            'lpg_mean': lpg_mean,
+            'hydrogen_mean': hydrogen_mean,
+            'humidity_mean': humidity_mean,
+            'temperature_mean': temperature_mean,
+            'co_median': co_median,
+            'lpg_median': lpg_median,
+            'hydrogen_median': hydrogen_median,
+            'humidity_median': humidity_median,
+            'temperature_median': temperature_median,
+            'co_mode': co_mode,
+            'lpg_mode': lpg_mode,
+            'hydrogen_mode': hydrogen_mode,
+            'humidity_mode': humidity_mode,
+            'temperature_mode': temperature_mode,
+            'date_quartiles': date_references,
+            'error_sum': error_sum,
+            'probable_cases': probable_cases
+        }
+
+        return result
 
 class EmailServiceImpl:
 

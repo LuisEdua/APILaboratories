@@ -31,5 +31,6 @@ class Measures(models.Model):
     hydrogen = models.DecimalField(max_digits=10, decimal_places=2)
     humidity = models.DecimalField(max_digits=4, decimal_places=2)
     temperature = models.DecimalField(max_digits=4, decimal_places=2)
+    error = models.IntegerField(default=0)
     serial_number_esp32 = models.CharField(max_length=50)
     dispositive = models.ForeignKey(Dispositive, on_delete=models.CASCADE, null=True)

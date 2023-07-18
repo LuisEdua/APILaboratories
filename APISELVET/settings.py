@@ -70,7 +70,15 @@ DEFAULT_FROM_EMAIL = 'selvetkal@gmail.com'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication'
-    ]
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+            'anon': '10/minute',
+            'user': '10/minute'
+    }
 }
 
 TEMPLATES = [
@@ -141,7 +149,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'HOST': '127.0.0.1',
         'PORT': '3306',
-        'USER': 'root',
+        'USER': 'kal',
         'PASSWORD': 'admin',
         'NAME': 'SELVET',
         'OPTIONS': {
