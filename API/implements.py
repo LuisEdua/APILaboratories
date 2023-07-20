@@ -1,7 +1,7 @@
 from datetime import timedelta, datetime
 from typing import Any
 from pytz import timezone
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import AccessToken
 import statistics
 import numpy as np
 from .interfaces import IMeasuresService, ISessionService, IUserService, IDispositiveService
@@ -9,9 +9,10 @@ from .models import Measures, Admin, Manager, Dispositive
 from django.http.response import JsonResponse
 from django.contrib.auth.hashers import make_password, check_password
 from rest_framework.response import Response
-from django.contrib.auth import authenticate
-import json
+from django.contrib.auth.models import User
+import json, jwt
 from django.core.mail import send_mail
+from django.conf import settings
 
 
 def base_response(message, response) -> JsonResponse:
@@ -21,6 +22,13 @@ def base_response(message, response) -> JsonResponse:
         data = {'message': message, 'status': False}
     return JsonResponse(data)
 
+def generate_custom_token(user_id):
+    payload = {
+        'user_id': user_id,
+        'exp': datetime.utcnow() + timedelta(hours=2)
+    }
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+    return token
 
 class AdminServiceImpl(IUserService):
 
@@ -32,13 +40,12 @@ class AdminServiceImpl(IUserService):
                 response = self.__admin_response__(admin, js)
                 message = "Login successfully"
                 status = True
-                refresh = RefreshToken.for_user(admin)
+                token = generate_custom_token(admin.id)
                 baseResponse = {
                     'response': response,
                     'message': message,
                     'status': status,
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token)
+                    'access': str(token)
                 }
             else:
                 message = "Invalid password"
@@ -196,13 +203,12 @@ class ManagerServiceImpl(IUserService):
                 response = self._manager_response_(manager, jd)
                 message = "Login successfully"
                 status = True
-                refresh = RefreshToken.for_user(manager)
+                token = generate_custom_token(manager.id)
                 baseResponse = {
                     'response': response,
                     'message': message,
                     'status': status,
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token)
+                    'access': token
                 }
             else:
                 message = "Invalid password"
@@ -389,6 +395,11 @@ class MeasuresServiceImpl(IMeasuresService):
                                        temperature=jd['temperature'],
                                        serial_number_esp32=jd['serial_number_esp32'], error=jd['error'], dispositive=dispositive)
 
+    def mean_deviation(self, data):
+        mean = np.mean(data)
+        deviations = [abs(x - mean) for x in data]
+        return np.mean(deviations)
+
     def _calculate_(self, measures):
         co_values = [measure['co'] for measure in measures]
         lpg_values = [measure['lpg'] for measure in measures]
@@ -398,6 +409,7 @@ class MeasuresServiceImpl(IMeasuresService):
         date_values = [measure['date'] for measure in measures]
         error_sum = sum(measure['error'] for measure in measures)
         probable_cases = len(measures) * 7
+        correct_cases = probable_cases - error_sum
 
         # Calcular la media
         co_mean = statistics.mean(co_values)
@@ -420,31 +432,99 @@ class MeasuresServiceImpl(IMeasuresService):
         humidity_mode = statistics.multimode(humidity_values)
         temperature_mode = statistics.multimode(temperature_values)
 
+        # Cálculo de la desviación media
+        co_deviation_mean = self.mean_deviation(co_values)
+        lpg_deviation_mean = self.mean_deviation(lpg_values)
+        hydrogen_deviation_mean = self.mean_deviation(hydrogen_values)
+        humidity_deviation_mean = self.mean_deviation(humidity_values)
+        temperature_deviation_mean = self.mean_deviation(temperature_values)
+
+        # Cálculo de la desviación estándar
+        co_standard_deviation = np.std(co_values)
+        lpg_standard_deviation = np.std(lpg_values)
+        hydrogen_standard_deviation = np.std(hydrogen_values)
+        humidity_standard_deviation = np.std(humidity_values)
+        temperature_standard_deviation = np.std(temperature_values)
+
+        # Cálculo de la varianza
+        co_variance = np.var(co_values)
+        lpg_variance = np.var(lpg_values)
+        hydrogen_variance = np.var(hydrogen_values)
+        humidity_variance = np.var(humidity_values)
+        temperature_variance = np.var(temperature_values)
+
+        # Obtener los valores máximos
+        co_max = max(measure['co'] for measure in measures)
+        lpg_max = max(measure['lpg'] for measure in measures)
+        hydrogen_max = max(measure['hydrogen'] for measure in measures)
+        humidity_max = max(measure['humidity'] for measure in measures)
+        temperature_max = max(measure['temperature'] for measure in measures)
+
         # Calcular los cuartiles de las fechas
         date_references = np.percentile([date.timestamp() for date in date_values], [1, 25, 50, 75, 100])
 
         date_references = [datetime.fromtimestamp(timestamp, self.tz_mexico).strftime("%Y-%m-%d %H:%M:%S") for timestamp in date_references]
 
         # Crear el diccionario de resultados
+        co_data = {
+            'mean': co_mean,
+            'median': co_median,
+            'mode': co_mode,
+            'max': co_max,
+            'deviation_mean': co_deviation_mean,
+            'standard_deviation': co_standard_deviation,
+            'variance': co_variance,
+        }
+
+        lpg_data = {
+            'mean': lpg_mean,
+            'median': lpg_median,
+            'mode': lpg_mode,
+            'max': lpg_max,
+            'deviation_mean': lpg_deviation_mean,
+            'standard_deviation': lpg_standard_deviation,
+            'variance': lpg_variance,
+        }
+
+        hydrogen_data = {
+            'mean': hydrogen_mean,
+            'median': hydrogen_median,
+            'mode': hydrogen_mode,
+            'max': hydrogen_max,
+            'deviation_mean': hydrogen_deviation_mean,
+            'standard_deviation': hydrogen_standard_deviation,
+            'variance': hydrogen_variance,
+        }
+
+        humidity_data = {
+            'mean': humidity_mean,
+            'median': humidity_median,
+            'mode': humidity_mode,
+            'max': humidity_max,
+            'deviation_mean': humidity_deviation_mean,
+            'standard_deviation': humidity_standard_deviation,
+            'variance': humidity_variance,
+        }
+
+        temperature_data = {
+            'mean': temperature_mean,
+            'median': temperature_median,
+            'mode': temperature_mode,
+            'max': temperature_max,
+            'deviation_mean': temperature_deviation_mean,
+            'standard_deviation': temperature_standard_deviation,
+            'variance': temperature_variance,
+        }
         result = {
-            'co_mean': co_mean,
-            'lpg_mean': lpg_mean,
-            'hydrogen_mean': hydrogen_mean,
-            'humidity_mean': humidity_mean,
-            'temperature_mean': temperature_mean,
-            'co_median': co_median,
-            'lpg_median': lpg_median,
-            'hydrogen_median': hydrogen_median,
-            'humidity_median': humidity_median,
-            'temperature_median': temperature_median,
-            'co_mode': co_mode,
-            'lpg_mode': lpg_mode,
-            'hydrogen_mode': hydrogen_mode,
-            'humidity_mode': humidity_mode,
-            'temperature_mode': temperature_mode,
+            'CO': co_data,
+            'LPG': lpg_data,
+            'Hydrogen': hydrogen_data,
+            'Humidity': humidity_data,
+            'Temperature': temperature_data,
             'date_quartiles': date_references,
             'error_sum': error_sum,
-            'probable_cases': probable_cases
+            'correct_cases': correct_cases,
+            'probable_cases': probable_cases,
         }
 
         return result

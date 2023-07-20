@@ -7,8 +7,7 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.permissions import AllowAny
 
 
 # Create your views here.
@@ -25,7 +24,7 @@ class MeasuresView(APIView):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 @throttle_classes([UserRateThrottle])
 def measure_list(request, id):
     return MeasuresView.iServiceMeasure.list(request, id)
@@ -50,6 +49,7 @@ class AdminsView(APIView):
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
+
 
     def post(self, request):
         return self.iServiceAdmin.create(request)
@@ -108,6 +108,5 @@ class SessionView(APIView):
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
-    @api_view(['POST'])
     def post(self, request):
         return self.iServiceSession.validate(request)

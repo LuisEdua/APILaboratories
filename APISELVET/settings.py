@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-    'API'
+    'API',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
@@ -66,6 +67,14 @@ EMAIL_HOST_USER = 'selvetkal@gmail.com'
 EMAIL_HOST_PASSWORD = 'hamldsfrlplfdzrh'
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'selvetkal@gmail.com'
+
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware'
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "*",
+]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
