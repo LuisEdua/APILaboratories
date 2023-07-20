@@ -86,7 +86,7 @@ REST_FRAMEWORK = {
     }
 }
 
-CORS_ALLOWED_ORIGINS = [
+CORS_ORIGIN_WITHELIST = [
     'http://*',
     'https://*',
 ]
