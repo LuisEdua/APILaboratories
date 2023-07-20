@@ -53,6 +53,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'APISELVET.urls'
@@ -68,14 +69,6 @@ EMAIL_HOST_PASSWORD = 'hamldsfrlplfdzrh'
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'selvetkal@gmail.com'
 
-MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware'
-]
-
-CORS_ALLOWED_ORIGINS = [
-    "*",
-]
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication'
@@ -89,6 +82,12 @@ REST_FRAMEWORK = {
             'user': '10/minute'
     }
 }
+
+CORS_ALLOWED_ORIGINS = [
+    'http://*',
+    'https://*',
+]
+
 
 TEMPLATES = [
     {
